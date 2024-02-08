@@ -5,21 +5,12 @@ from app.database import Base
 metadata = MetaData()
 
 
-class User(Base):
-    __tablename__ = 'user'
-
-    id = Column(Integer, primary_key=True)
-    email = Column(String, nullable=False)
-    username = Column(String, nullable=False)
-    hashed_password = Column(String, nullable=False)
-
-
 class News(Base):
     __tablename__ = 'news'
 
     id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
-    author = Column(Integer, ForeignKey('user.id'))
+    author_id = Column(Integer, ForeignKey('users.id'))
     summary = Column(String(250), nullable=False)
     description = Column(String, nullable=False)
     views = Column(Integer, default=0)
