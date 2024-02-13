@@ -6,6 +6,8 @@ from app.database import async_session_maker
 from app.news.dao import NewsDAO
 from app.news.models import News
 from app.news.schemas import SNewsCreate, SNewsList
+from app.users.dependencies import get_current_user
+from app.users.models import User
 
 router = APIRouter(
     prefix="/news",
@@ -46,10 +48,10 @@ async def remove_news(
 
 
 @router.post("/news", status_code=201)
-async def add_news(news: SNewsCreate):
+async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
     await NewsDAO.create(
+        author_id=user.id,
         title=news.title,
-        author_id=news.author_id,
         summary=news.summary,
         description=news.description,
         favourites=news.favourites,
