@@ -1,10 +1,25 @@
-from sqlalchemy import select, insert, delete, update
+from sqlalchemy import select, insert, delete, update, desc
 
 from app.database import async_session_maker
+from app.news.models import News
 
 
 class BaseDAO:
     model = None
+
+    @classmethod
+    def sorting_query(cls, query, filters):
+        if filters.sort_by == 'rating':
+            if filters.sort_order == 'asc':
+                query = query.order_by(cls.model.rating)
+            elif filters.sort_order == 'desc':
+                query = query.order_by(desc(cls.model.rating))
+        if filters.sort_by == 'created_at':
+            if filters.sort_order == 'asc':
+                query = query.order_by(cls.model.created_at)
+            elif filters.sort_order == 'desc':
+                query = query.order_by(desc(cls.model.created_at))
+        return query
 
     @classmethod
     async def find_one_or_none(cls, **filter_by):
@@ -14,9 +29,10 @@ class BaseDAO:
             return result.mappings().one_or_none()
 
     @classmethod
-    async def find_all(cls, **filter_by):
+    async def find_all(cls, filters):
         async with async_session_maker() as session:
-            query = select(cls.model.__table__.columns).filter_by(**filter_by)
+            query = select(cls.model.__table__.columns)
+            query = cls.sorting_query(query, filters)
             result = await session.execute(query)
             return result.mappings().all()
 

@@ -28,17 +28,17 @@ class SNewsCreate(BaseModel):
     rating: int
 
 
-class SNewsList(SNewsBase):
-    pass
+class SNewsList(BaseModel):
+    results: list[SNewsBase]
 
 
 class SNewsFilter(BaseModel):
-    limit: int = 25
-    page: int = 1
+    # limit: int = 25
+    # page: int = 1
     # search_title: Optional[str] = None
     # search_username: Optional[str] = None
     # filter_date_from: Optional[datetime] = None
     # filter_date_to: Optional[datetime] = None
-    # sort_by: Optional[str] = None
-    # sort_order: Optional[str] = None
+    sort_by: Optional[str] = None
+    sort_order: Optional[str] = None
 

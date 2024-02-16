@@ -5,7 +5,7 @@ from fastapi import APIRouter, status, Depends
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
 from app.news.models import News
-from app.news.schemas import SNewsCreate, SNewsList
+from app.news.schemas import SNewsCreate, SNewsList, SNewsFilter
 from app.users.dependencies import get_current_user
 from app.users.models import User
 
@@ -16,8 +16,13 @@ router = APIRouter(
 
 
 @router.get("")
-async def get_news() -> list[SNewsList]:
-    return await NewsDAO.find_all()
+async def get_news(
+        filters: SNewsFilter = Depends()
+) -> SNewsList:
+    news = await NewsDAO.find_all(filters)
+    return SNewsList(
+        results=news,
+    )
 
 
 #         results=posts,
