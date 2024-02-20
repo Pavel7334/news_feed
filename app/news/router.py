@@ -1,6 +1,4 @@
-from _datetime import datetime
-
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
@@ -17,21 +15,14 @@ router = APIRouter(
 
 @router.get("")
 async def get_news(
+        skip: int = Query(0, alias="page", ge=0),
+        limit: int = Query(10, le=100),
         filters: SNewsFilter = Depends()
 ) -> SNewsList:
-    news = await NewsDAO.find_all(filters)
+    news = await NewsDAO.find_all(filters, skip=skip, limit=limit)
     return SNewsList(
         results=news,
     )
-
-
-#         results=posts,
-#         page=page,
-#         limit=limit,
-#         search_title=search_title,
-#         search_username=search_username,
-#         filter_date_from=filter_date_from,
-#         filter_dates_to=filter_dates_to
 
 
 @router.get('/{news_id}')

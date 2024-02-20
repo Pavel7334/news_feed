@@ -2,6 +2,7 @@ from sqlalchemy import select, insert, delete, update, desc
 
 from app.database import async_session_maker
 from app.news.models import News
+from app.news.schemas import SNewsFilter
 
 
 class BaseDAO:
@@ -29,9 +30,10 @@ class BaseDAO:
             return result.mappings().one_or_none()
 
     @classmethod
-    async def find_all(cls, filters):
+    async def find_all(cls, filters: SNewsFilter, skip: int = 0, limit: int = 10):
+        # print(type(filters))
         async with async_session_maker() as session:
-            query = select(cls.model.__table__.columns)
+            query = select(cls.model.__table__.columns).offset(skip).limit(limit)
             query = cls.sorting_query(query, filters)
             result = await session.execute(query)
             return result.mappings().all()
