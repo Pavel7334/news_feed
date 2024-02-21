@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -32,13 +32,31 @@ class SNewsList(BaseModel):
     results: list[SNewsBase]
 
 
+# class SNewsFilter(BaseModel):
+#     skip: int
+#     limit: int = 25
+#     sort_by: Optional[str] = None
+#     sort_order: Optional[str] = None
+
+# class SNewsFilter(BaseModel):
+#     skip: int
+#     limit: int = 25
+#     sort_by: Optional[str] = None
+#     sort_order: Optional[str] = None
+#     author: Optional[str] = None
+#     category: Optional[str] = None
+#     tags: Optional[List[str]] = None
+
 class SNewsFilter(BaseModel):
-    # limit: int = 25
-    # page: int = 1
-    # search_title: Optional[str] = None
-    # search_username: Optional[str] = None
-    # filter_date_from: Optional[datetime] = None
-    # filter_date_to: Optional[datetime] = None
+    page: int = 1
+    limit: int = 25
     sort_by: Optional[str] = None
     sort_order: Optional[str] = None
 
+
+class SNewsListWithPagination(BaseModel):
+    count: int
+    limit: int
+    page: int
+    last_page: int
+    results: List[SNewsBase]

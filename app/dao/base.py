@@ -1,4 +1,4 @@
-from sqlalchemy import select, insert, delete, update, desc
+from sqlalchemy import select, insert, delete, update, desc, func
 
 from app.database import async_session_maker
 from app.news.models import News
@@ -7,6 +7,7 @@ from app.news.schemas import SNewsFilter
 
 class BaseDAO:
     model = None
+    count = 0
 
     @classmethod
     def sorting_query(cls, query, filters):
@@ -30,12 +31,12 @@ class BaseDAO:
             return result.mappings().one_or_none()
 
     @classmethod
-    async def find_all(cls, filters: SNewsFilter, skip: int = 0, limit: int = 10):
-        # print(type(filters))
+    async def find_all(cls, filters: SNewsFilter):
         async with async_session_maker() as session:
-            query = select(cls.model.__table__.columns).offset(skip).limit(limit)
+            query = select(cls.model.__table__.columns).offset(filters.page-1).limit(filters.limit)
             query = cls.sorting_query(query, filters)
             result = await session.execute(query)
+            cls.count = await cls.get_count(query)
             return result.mappings().all()
 
     @classmethod
@@ -59,3 +60,10 @@ class BaseDAO:
             query = delete(cls.model).filter_by(**filter_by)
             await session.execute(query)
             await session.commit()
+
+    @classmethod
+    async def get_count(cls, query) -> int:
+        async with async_session_maker() as session:
+            query = select(func.count()).select_from(query)
+            result = await session.execute(query)
+            return result.scalar()
