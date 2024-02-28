@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
@@ -38,9 +38,12 @@ async def get_news_id(news_id: int):
     async with async_session_maker() as session:
         news = await NewsDAO.get_news_by_id(news_id, session)
         if not news:
-            return {'error': 'Статья не найдена'}
+            raise HTTPException(status_code=404, detail="Такой новости нет")
+        new_counter = News.views
+        new_counter += 1
+        await session.commit()
 
-        updated_news = await NewsDAO.update_views(news_id, session)
+        updated_news = await NewsDAO.update(news_id, views=new_counter)
 
         return {
             'id': updated_news.id,
@@ -49,17 +52,6 @@ async def get_news_id(news_id: int):
             'views': updated_news.views,
             'rating': updated_news.rating
         }
-
-
-# @router.get('/{news_id}')
-# async def get_news_id(
-#         news_id: int,
-# ):
-#     async with async_session_maker() as session:
-#         new_counter = News.views
-#         new_counter += 1
-#         await session.commit()
-#     return await NewsDAO.update(id=news_id, views=new_counter)
 
 
 @router.delete("/{news_id}")
