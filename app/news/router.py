@@ -14,17 +14,6 @@ router = APIRouter(
 )
 
 
-# @router.get("")
-# async def get_news(
-#         skip: int = Query(0, alias="page", ge=0),
-#         limit: int = Query(10, le=100),
-#         filters: SNewsFilter = Depends()
-# ) -> SNewsList:
-#     news = await NewsDAO.find_all(filters, skip=skip, limit=limit)
-#     return SNewsList(
-#         results=news,
-#     )
-
 @router.get("", response_model=SNewsListWithPagination)
 async def get_news(
         filters: SNewsFilter = Depends()
@@ -45,14 +34,32 @@ async def get_news(
 
 
 @router.get('/{news_id}')
-async def get_news_id(
-        news_id: int,
-):
+async def get_news_id(news_id: int):
     async with async_session_maker() as session:
-        new_counter = News.views
-        new_counter += 1
-        await session.commit()
-    return await NewsDAO.update(id=news_id, views=new_counter)
+        news = await NewsDAO.get_news_by_id(news_id, session)
+        if not news:
+            return {'error': 'Статья не найдена'}
+
+        updated_news = await NewsDAO.update_views(news_id, session)
+
+        return {
+            'id': updated_news.id,
+            'title': updated_news.title,
+            'summary': updated_news.summary,
+            'views': updated_news.views,
+            'rating': updated_news.rating
+        }
+
+
+# @router.get('/{news_id}')
+# async def get_news_id(
+#         news_id: int,
+# ):
+#     async with async_session_maker() as session:
+#         new_counter = News.views
+#         new_counter += 1
+#         await session.commit()
+#     return await NewsDAO.update(id=news_id, views=new_counter)
 
 
 @router.delete("/{news_id}")
