@@ -32,21 +32,6 @@ class SNewsList(BaseModel):
     results: list[SNewsBase]
 
 
-# class SNewsFilter(BaseModel):
-#     skip: int
-#     limit: int = 25
-#     sort_by: Optional[str] = None
-#     sort_order: Optional[str] = None
-
-# class SNewsFilter(BaseModel):
-#     skip: int
-#     limit: int = 25
-#     sort_by: Optional[str] = None
-#     sort_order: Optional[str] = None
-#     author: Optional[str] = None
-#     category: Optional[str] = None
-#     tags: Optional[List[str]] = None
-
 class SNewsFilter(BaseModel):
     page: int = 1
     limit: int = 25

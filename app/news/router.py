@@ -35,23 +35,21 @@ async def get_news(
 
 @router.get('/{news_id}')
 async def get_news_id(news_id: int):
-    async with async_session_maker() as session:
-        news = await NewsDAO.get_news_by_id(news_id, session)
-        if not news:
-            raise HTTPException(status_code=404, detail="Такой новости нет")
-        new_counter = News.views
-        new_counter += 1
-        await session.commit()
+    news = await NewsDAO.find_one_or_none(id=news_id)
+    if not news:
+        raise HTTPException(status_code=404, detail="Такой новости нет")
+    new_counter = News.views
+    new_counter += 1
 
-        updated_news = await NewsDAO.update(news_id, views=new_counter)
+    updated_news = await NewsDAO.update(news_id, views=new_counter)
 
-        return {
-            'id': updated_news.id,
-            'title': updated_news.title,
-            'summary': updated_news.summary,
-            'views': updated_news.views,
-            'rating': updated_news.rating
-        }
+    return {
+        'id': updated_news.id,
+        'title': updated_news.title,
+        'summary': updated_news.summary,
+        'views': updated_news.views,
+        'rating': updated_news.rating
+    }
 
 
 @router.delete("/{news_id}")
@@ -72,3 +70,27 @@ async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
         estimation=news.estimation,
         rating=news.rating,
     )
+
+
+@router.post("/{news_id}/up_vote", status_code=200)
+async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
+    # Проверить, что пользователь еще не голосовал за эту новость
+    if await NewsDAO.has_user_voted(news_id, user.id, voted=True):
+        raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+
+    # Повысить рейтинг новости
+    await NewsDAO.upvote(news_id)
+
+    return {"message": "Рейтинг повышен успешно"}
+
+
+@router.post("/{news_id}/down_vote", status_code=200)
+async def down_vote_news(news_id: int, user: User = Depends(get_current_user)):
+    # Проверить, что пользователь еще не голосовал за эту новость
+    if await NewsDAO.has_user_voted(news_id, user.id):
+        raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+
+    # Понизить рейтинг новости
+    await NewsDAO.downvote(news_id)
+
+    return {"message": "Рейтинг понижен успешно"}

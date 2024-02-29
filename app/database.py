@@ -1,3 +1,4 @@
+from sqlalchemy import Column, Integer
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -9,4 +10,5 @@ async_session_maker = sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 class Base(DeclarativeBase):
-    pass
+
+    id = Column(Integer, primary_key=True)

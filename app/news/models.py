@@ -8,7 +8,6 @@ metadata = MetaData()
 class News(Base):
     __tablename__ = 'news'
 
-    id = Column(Integer, primary_key=True)
     title = Column(String, nullable=False)
     author_id = Column(Integer, ForeignKey('users.id'))
     summary = Column(String(250), nullable=False)
@@ -19,4 +18,12 @@ class News(Base):
     rating = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Vote(Base):
+    __tablename__ = 'votes'
+
+    author_id = Column(Integer, ForeignKey('users.id'))
+    news_id = Column(Integer, ForeignKey('news.id'))
+    voted = Column(Boolean, default=False)
 
