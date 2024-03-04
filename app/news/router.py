@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_, select
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
-from app.news.models import News
-from app.news.schemas import SNewsCreate, SNewsList, SNewsFilter, SNewsListWithPagination
+from app.news.models import News, Vote
+from app.news.schemas import SNewsCreate, SNewsFilter, SNewsListWithPagination
 from app.users.dependencies import get_current_user
 from app.users.models import User
 from math import ceil
@@ -74,23 +75,90 @@ async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
 
 @router.post("/{news_id}/up_vote", status_code=200)
 async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
-    # Проверить, что пользователь еще не голосовал за эту новость
-    if await NewsDAO.has_user_voted(news_id, user.id, voted=True):
-        raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+    async with async_session_maker() as session:
+        async with session.begin():
+            # Проверить, что пользователь еще не голосовал за эту новость
+            if await NewsDAO.has_user_voted(news_id, user.id, voted=True):
+                raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
 
-    # Повысить рейтинг новости
-    await NewsDAO.upvote(news_id)
+            # Повысить рейтинг новости
+            await NewsDAO.upvote(news_id, user.id, session)
+
+            # Проверить, есть ли уже запись в таблице votes
+            existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
+            existing_vote = existing_vote.scalar()
+
+            # Если запись уже существует, обновить ее
+            if existing_vote:
+                existing_vote.voted = True
+            else:
+                # Иначе, добавить новую запись
+                new_vote = Vote(news_id=news_id, author_id=user.id, voted=True)
+                session.add(new_vote)
 
     return {"message": "Рейтинг повышен успешно"}
 
 
 @router.post("/{news_id}/down_vote", status_code=200)
 async def down_vote_news(news_id: int, user: User = Depends(get_current_user)):
-    # Проверить, что пользователь еще не голосовал за эту новость
-    if await NewsDAO.has_user_voted(news_id, user.id):
-        raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+    async with async_session_maker() as session:
+        async with session.begin():
+            # Проверить, что пользователь еще не голосовал за эту новость
+            if await NewsDAO.has_user_voted(news_id, user.id, voted=False):
+                raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
 
-    # Понизить рейтинг новости
-    await NewsDAO.downvote(news_id)
+            # Понизить рейтинг новости
+            await NewsDAO.downvote(news_id, user.id, session)
+
+            # Проверить, есть ли уже запись в таблице votes
+            existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
+            existing_vote = existing_vote.scalar()
+
+            # Если запись уже существует, обновить ее
+            if existing_vote:
+                existing_vote.voted = False
+            else:
+                # Иначе, добавить новую запись
+                new_vote = Vote(news_id=news_id, author_id=user.id, voted=False)
+                session.add(new_vote)
 
     return {"message": "Рейтинг понижен успешно"}
+
+
+# @router.post("/{news_id}/up_vote", status_code=200)
+# async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
+#     # Проверить, что пользователь еще не голосовал за эту новость
+#     if await NewsDAO.has_user_voted(news_id, user.id, voted=True):
+#         raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+#
+#     # Повысить рейтинг новости
+#     await NewsDAO.upvote(news_id)
+#
+#     # Добавить запись в таблицу votes
+#     async with async_session_maker() as session:
+#         insert_query = insert(Vote).values(news_id=news_id, author_id=user.id, voted=True)
+#         await session.execute(insert_query)
+#         await session.commit()
+#
+#     return {"message": "Рейтинг повышен успешно"}
+#
+#
+# @router.post("/{news_id}/down_vote", status_code=200)
+# async def down_vote_news(news_id: int, user: User = Depends(get_current_user)):
+#     # Проверить, что пользователь еще не голосовал за эту новость
+#     if await NewsDAO.has_user_voted(news_id, user.id, voted=False):
+#         raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
+#
+#     # Понизить рейтинг новости
+#     await NewsDAO.downvote(news_id)
+#
+#     # Добавить запись в таблицу votes
+#     async with async_session_maker() as session:
+#         update_query = update(Vote).where(
+#             and_(Vote.news_id == news_id, Vote.author_id == user.id)
+#         ).values(voted=False)
+#         await session.execute(update_query)
+#         await session.commit()
+
+
+# delete_query = delete(Vote).where((Vote.news_id == news_id) & (Vote.author_id == user.id))
