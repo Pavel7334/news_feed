@@ -44,13 +44,13 @@ class NewsDAO(BaseDAO):
             return bool(news_with_access)  # Возвращаем True, если есть доступ, иначе False
 
     @classmethod
-    async def upvote(cls, news_id: int, user_id: int, session: AsyncSession):
+    async def upvote(cls, news_id: int, session: AsyncSession):
 
         query = update(cls.model).where(cls.model.id == news_id).values(rating=cls.model.rating + 1)
         await session.execute(query)
 
     @classmethod
-    async def downvote(cls, news_id: int, user_id: int, session: AsyncSession):
+    async def downvote(cls, news_id: int, session: AsyncSession):
 
         query = update(cls.model).where(cls.model.id == news_id).values(rating=cls.model.rating - 1)
         await session.execute(query)
