@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_session
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
@@ -43,13 +44,15 @@ async def get_news_id(news_id: int):
     new_counter += 1
 
     updated_news = await NewsDAO.update(news_id, views=new_counter)
+    # Вызываем метод count_votes для получения количества голосов
+    votes_count = await NewsDAO.count_votes(news_id)
 
     return {
         'id': updated_news.id,
         'title': updated_news.title,
         'summary': updated_news.summary,
         'views': updated_news.views,
-        'rating': updated_news.rating
+        'rating': votes_count
     }
 
 
@@ -81,9 +84,6 @@ async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
             if await NewsDAO.has_user_voted(news_id, user.id, voted=True):
                 raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
 
-            # Повысить рейтинг новости
-            await NewsDAO.upvote(news_id, session)
-
             # Проверить, есть ли уже запись в таблице votes
             existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
             existing_vote = existing_vote.scalar()
@@ -106,9 +106,6 @@ async def down_vote_news(news_id: int, user: User = Depends(get_current_user)):
             # Проверить, что пользователь еще не голосовал за эту новость
             if await NewsDAO.has_user_voted(news_id, user.id, voted=False):
                 raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
-
-            # Понизить рейтинг новости
-            await NewsDAO.downvote(news_id, session)
 
             # Проверить, есть ли уже запись в таблице votes
             existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))

@@ -15,7 +15,6 @@ class News(Base):
     views = Column(Integer, default=0)
     favourites = Column(Boolean, default=False)
     estimation = Column(Integer, default=0)
-    rating = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

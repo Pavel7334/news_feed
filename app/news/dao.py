@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import update, select, exists, and_, delete
+from sqlalchemy import update, select, exists, and_, delete, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.base import BaseDAO
@@ -44,16 +44,32 @@ class NewsDAO(BaseDAO):
             return bool(news_with_access)  # Возвращаем True, если есть доступ, иначе False
 
     @classmethod
-    async def upvote(cls, news_id: int, session: AsyncSession):
+    async def count_votes(cls, news_id: int):
+        async with async_session_maker() as session:
+            query = select(
+                func.sum(
+                    case(
+                        (Vote.voted == True, 1),
+                        else_=0
+                    )
+                ).label(
+                    'plus_count'
+                ),
+                func.sum(
+                    case(
+                        (Vote.voted == False, 1),
+                        else_=0
+                    )
+                ).label(
+                    'minus_count'
+                )
+            ).where(Vote.news_id == news_id)
 
-        query = update(cls.model).where(cls.model.id == news_id).values(rating=cls.model.rating + 1)
-        await session.execute(query)
+            result = await session.execute(query)
+            counts = result.fetchone()
 
-    @classmethod
-    async def downvote(cls, news_id: int, session: AsyncSession):
+            return counts[0] - counts[1]
 
-        query = update(cls.model).where(cls.model.id == news_id).values(rating=cls.model.rating - 1)
-        await session.execute(query)
 
     @classmethod
     async def remove_vote(cls, news_id: int, user_id: int):
@@ -67,4 +83,3 @@ class NewsDAO(BaseDAO):
             await session.execute(query_remove_vote)
 
             await session.commit()
-
