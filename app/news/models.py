@@ -13,7 +13,6 @@ class News(Base):
     summary = Column(String(250), nullable=False)
     description = Column(String, nullable=False)
     views = Column(Integer, default=0)
-    favourites = Column(Boolean, default=False)
     estimation = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -26,3 +25,9 @@ class Vote(Base):
     news_id = Column(Integer, ForeignKey('news.id'))
     voted = Column(Boolean, default=False)
 
+
+class Favourites(Base):
+    __tablename__ = 'favourites'
+
+    author_id = Column(Integer, ForeignKey('users.id'))
+    news_id = Column(Integer, ForeignKey('news.id'))

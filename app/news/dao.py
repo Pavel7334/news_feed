@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.base import BaseDAO
 from app.database import async_session_maker
-from app.news.models import News, Vote
+from app.news.models import News, Vote, Favourites
+from app.users.models import User
 
 
 class NewsDAO(BaseDAO):
@@ -70,7 +71,6 @@ class NewsDAO(BaseDAO):
 
             return counts[0] - counts[1]
 
-
     @classmethod
     async def remove_vote(cls, news_id: int, user_id: int):
         async with async_session_maker() as session:
@@ -83,3 +83,37 @@ class NewsDAO(BaseDAO):
             await session.execute(query_remove_vote)
 
             await session.commit()
+
+    @classmethod
+    async def get_favourites_for_current_user(cls, current_user: User, session: AsyncSession):
+        stmt = select(News).join(Favourites).where(
+            Favourites.author_id == current_user.id,
+            Favourites.news_id == News.id
+        )
+        result = await session.execute(stmt)
+        favourites = result.scalars().all()
+        return favourites
+
+    @classmethod
+    async def add_news_to_favourites(cls, news_id: int, current_user: User, session: AsyncSession):
+        news = await session.get(News, news_id)
+        if news is None:
+            raise HTTPException(status_code=404, detail="Такой новости нет")
+
+        existing_favourite = await session.execute(
+            select(Favourites).filter(
+                Favourites.author_id == current_user.id,
+                Favourites.news_id == news_id
+            )
+        )
+        existing_favourite = existing_favourite.scalar_one_or_none()
+        if existing_favourite:
+            raise HTTPException(status_code=400, detail="Новость уже добавлены в избранное")
+
+        new_favourite = Favourites(
+            author_id=current_user.id,
+            news_id=news_id
+        )
+        session.add(new_favourite)
+        await session.commit()
+        return new_favourite

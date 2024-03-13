@@ -1,11 +1,15 @@
+from datetime import datetime
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_session
+from sqlalchemy.orm import selectinload
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
-from app.news.models import News, Vote
-from app.news.schemas import SNewsCreate, SNewsFilter, SNewsListWithPagination
+from app.news.models import News, Vote, Favourites
+from app.news.schemas import SNewsCreate, SNewsFilter, SNewsListWithPagination, SNewsBase
 from app.users.dependencies import get_current_user
 from app.users.models import User
 from math import ceil
@@ -33,6 +37,20 @@ async def get_news(
         last_page=total_pages,
         results=news,
     )
+
+
+@router.get("/favourites", response_model=list[SNewsBase])
+async def get_favourites_for_current_user(current_user: User = Depends(get_current_user)):
+    async with async_session_maker() as session:
+        favourites = await NewsDAO.get_favourites_for_current_user(current_user, session)
+    return favourites
+
+
+@router.post("/favourites/{news_id}")
+async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_current_user)):
+    async with async_session_maker() as session:
+        new_favourite = await NewsDAO.add_news_to_favourites(news_id, current_user, session)
+    return new_favourite
 
 
 @router.get('/{news_id}')
@@ -85,7 +103,8 @@ async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
                 raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
 
             # Проверить, есть ли уже запись в таблице votes
-            existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
+            existing_vote = await session.execute(
+                select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
             existing_vote = existing_vote.scalar()
 
             # Если запись уже существует, обновить ее
@@ -108,7 +127,8 @@ async def down_vote_news(news_id: int, user: User = Depends(get_current_user)):
                 raise HTTPException(status_code=400, detail="Вы уже голосовали за эту новость")
 
             # Проверить, есть ли уже запись в таблице votes
-            existing_vote = await session.execute(select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
+            existing_vote = await session.execute(
+                select(Vote).where(and_(Vote.news_id == news_id, Vote.author_id == user.id)))
             existing_vote = existing_vote.scalar()
 
             # Если запись уже существует, обновить ее
