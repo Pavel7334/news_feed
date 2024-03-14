@@ -1,14 +1,9 @@
-from datetime import datetime
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select, func
-from sqlalchemy.ext.asyncio import AsyncSession, async_session
-from sqlalchemy.orm import selectinload
+from sqlalchemy import and_, select
 
 from app.database import async_session_maker
 from app.news.dao import NewsDAO
-from app.news.models import News, Vote, Favourites
+from app.news.models import News, Vote
 from app.news.schemas import SNewsCreate, SNewsFilter, SNewsListWithPagination, SNewsBase
 from app.users.dependencies import get_current_user
 from app.users.models import User
@@ -39,18 +34,25 @@ async def get_news(
     )
 
 
-@router.get("/favourites", response_model=list[SNewsBase])
-async def get_favourites_for_current_user(current_user: User = Depends(get_current_user)):
-    async with async_session_maker() as session:
-        favourites = await NewsDAO.get_favourites_for_current_user(current_user, session)
-    return favourites
+@router.get("/news/{slug}")
+async def get_news_by_slug(slug: str):
+    news = await get_news_by_slug(slug)
+    if news is None:
+        raise HTTPException(status_code=404, detail="Новость не найдена")
+    return news
 
 
-@router.post("/favourites/{news_id}")
-async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_current_user)):
-    async with async_session_maker() as session:
-        new_favourite = await NewsDAO.add_news_to_favourites(news_id, current_user, session)
-    return new_favourite
+@router.post("/news", status_code=201)
+async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
+    await NewsDAO.create(
+        author_id=user.id,
+        title=news.title,
+        summary=news.summary,
+        description=news.description,
+        favourites=news.favourites,
+        estimation=news.estimation,
+        rating=news.rating,
+    )
 
 
 @router.get('/{news_id}')
@@ -81,17 +83,14 @@ async def remove_news(
     await NewsDAO.delete(id=news_id)
 
 
-@router.post("/news", status_code=201)
-async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
-    await NewsDAO.create(
-        author_id=user.id,
-        title=news.title,
-        summary=news.summary,
-        description=news.description,
-        favourites=news.favourites,
-        estimation=news.estimation,
-        rating=news.rating,
-    )
+@router.get("/favourites", response_model=list[SNewsBase])
+async def get_favourites_for_current_user(current_user: User = Depends(get_current_user)):
+    return await NewsDAO.get_favourites_for_current_user(current_user)
+
+
+@router.post("/favourites/{news_id}")
+async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_current_user)):
+    return await NewsDAO.add_news_to_favourites(news_id, current_user)
 
 
 @router.post("/{news_id}/up_vote", status_code=200)
