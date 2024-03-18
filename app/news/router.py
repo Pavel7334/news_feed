@@ -35,8 +35,8 @@ async def get_news(
 
 
 @router.get("/news/{slug}")
-async def get_news_by_slug(slug: str):
-    news = await get_news_by_slug(slug)
+async def get_news_by_slug_endpoint(slug: str):
+    news = await NewsDAO.get_by_slug(slug)
     if news is None:
         raise HTTPException(status_code=404, detail="Новость не найдена")
     return news
@@ -44,15 +44,17 @@ async def get_news_by_slug(slug: str):
 
 @router.post("/news", status_code=201)
 async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
-    await NewsDAO.create(
-        author_id=user.id,
-        title=news.title,
-        summary=news.summary,
-        description=news.description,
-        favourites=news.favourites,
-        estimation=news.estimation,
-        rating=news.rating,
-    )
+    # Создаем словарь с данными для создания новости
+    news_data = {
+        'title': news.title,
+        'author_id': user.id,
+        'summary': news.summary,
+        'description': news.description,
+        'estimation': news.estimation,
+    }
+    new_news = News(**news_data)  # Создаем экземпляр модели News с помощью переданных данных
+    new_news.generate_slug()  # Генерация slug перед сохранением
+    await new_news.save()  # Сохраняем новость в базе данных
 
 
 @router.get('/{news_id}')
@@ -60,7 +62,7 @@ async def get_news_id(news_id: int):
     news = await NewsDAO.find_one_or_none(id=news_id)
     if not news:
         raise HTTPException(status_code=404, detail="Такой новости нет")
-    new_counter = News.views
+    new_counter = news.views
     new_counter += 1
 
     updated_news = await NewsDAO.update(news_id, views=new_counter)

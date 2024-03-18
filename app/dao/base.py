@@ -40,11 +40,14 @@ class BaseDAO:
             return result.mappings().all()
 
     @classmethod
-    async def create(cls, **data):
+    async def create(cls, data):
         async with async_session_maker() as session:
-            query = insert(cls.model).values(**data)
-            await session.execute(query)
+            # Создаем экземпляр модели, передавая данные
+            instance = cls.model(**data)
+            session.add(instance)
             await session.commit()
+
+
 
     @classmethod
     async def update(cls, id: int, **data):
@@ -67,3 +70,10 @@ class BaseDAO:
             query = select(func.count()).select_from(query)
             result = await session.execute(query)
             return result.scalar()
+
+    @classmethod
+    async def get_by_slug(cls, slug: str):
+        async with async_session_maker() as session:
+            query = select(cls.model).where(cls.model.slug == slug)
+            result = await session.execute(query)
+            return result.scalar_one_or_none()

@@ -75,7 +75,10 @@ class NewsDAO(BaseDAO):
             result = await session.execute(query)
             counts = result.fetchone()
 
-            return counts[0] - counts[1]
+            if counts is None:
+                return 0
+
+            return (counts[0] or 0) - (counts[1] or 0)
 
     @classmethod
     async def remove_vote(cls, news_id: int, user_id: int):

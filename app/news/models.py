@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import MetaData, TIMESTAMP, Boolean, DateTime, JSON, Column, ForeignKey, Integer, String, func, select
+
 from app.database import Base, async_session_maker
 from transliterate import slugify
 
@@ -17,11 +18,16 @@ class News(Base):
     estimation = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    slug = Column(String, nullable=False,  server_default="")
+    slug = Column(String, nullable=False, unique=True,  server_default="")
 
     # Метод для генерации slug из заголовка новости
     def generate_slug(self):
         self.slug = slugify(self.title)
+
+    async def save(self):
+        async with async_session_maker() as session:
+            session.add(self)
+            await session.commit()
 
 
 class Vote(Base):
