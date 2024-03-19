@@ -95,6 +95,15 @@ async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_
     return await NewsDAO.add_news_to_favourites(news_id, current_user)
 
 
+@router.delete("/favourites/{news_id}", response_model=dict)
+async def remove_news_from_favourites(news_id: int, current_user: User = Depends(get_current_user)):
+    try:
+        removed_favourite = await NewsDAO().remove_news_from_favourites(news_id, current_user)
+        return removed_favourite
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
 @router.post("/{news_id}/up_vote", status_code=200)
 async def up_vote_news(news_id: int, user: User = Depends(get_current_user)):
     async with async_session_maker() as session:

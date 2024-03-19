@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import update, select, exists, and_, delete, func, case
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.base import BaseDAO
@@ -10,6 +11,30 @@ from app.users.models import User
 
 class NewsDAO(BaseDAO):
     model = News
+
+    @staticmethod
+    async def remove_news_from_favourites(news_id: int, current_user: User):
+        async with async_session_maker() as session:
+            try:
+                # Проверяем, существует ли избранная новость для данного пользователя
+                stmt = delete(Favourites).where(
+                    Favourites.author_id == current_user.id,
+                    Favourites.news_id == news_id
+                )
+
+                # Выполняем запрос на удаление
+                result = await session.execute(stmt)
+                await session.commit()
+
+                # Проверяем, была ли удалена избранная новость
+                if result.rowcount == 0:
+                    raise HTTPException(status_code=404, detail="Новость не найдена в избранном пользователя")
+
+                return {"deleted_news_id": news_id}
+            except HTTPException as exc:
+                raise exc
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=str(exc))
 
     @staticmethod
     async def get_news_by_slug(slug: str):
