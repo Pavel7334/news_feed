@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, select
 
@@ -34,14 +36,6 @@ async def get_news(
     )
 
 
-@router.get("/news/{slug}")
-async def get_news_by_slug_endpoint(slug: str):
-    news = await NewsDAO.get_by_slug(slug)
-    if news is None:
-        raise HTTPException(status_code=404, detail="Новость не найдена")
-    return news
-
-
 @router.post("/news", status_code=201)
 async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
     # Создаем словарь с данными для создания новости
@@ -55,6 +49,33 @@ async def add_news(news: SNewsCreate, user: User = Depends(get_current_user)):
     new_news = News(**news_data)  # Создаем экземпляр модели News с помощью переданных данных
     new_news.generate_slug()  # Генерация slug перед сохранением
     await new_news.save()  # Сохраняем новость в базе данных
+
+
+@router.get("/favourites", response_model=List[SNewsBase])
+async def get_favourites_for_current_user(current_user: User = Depends(get_current_user)):
+    return await NewsDAO.get_favourites_for_current_user(current_user)
+
+
+@router.post("/favourites/{news_id}")
+async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_current_user)):
+    return await NewsDAO.add_news_to_favourites(news_id, current_user)
+
+
+@router.delete("/favourites/{news_id}", response_model=dict)
+async def remove_news_from_favourites(news_id: int, current_user: User = Depends(get_current_user)):
+    try:
+        removed_favourite = await NewsDAO().remove_news_from_favourites(news_id, current_user)
+        return removed_favourite
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/news/{slug}")
+async def get_news_by_slug_endpoint(slug: str):
+    news = await NewsDAO.get_by_slug(slug)
+    if news is None:
+        raise HTTPException(status_code=404, detail="Новость не найдена")
+    return news
 
 
 @router.get('/{news_id}')
@@ -83,25 +104,6 @@ async def remove_news(
         news_id: int,
 ):
     await NewsDAO.delete(id=news_id)
-
-
-@router.get("/favourites", response_model=list[SNewsBase])
-async def get_favourites_for_current_user(current_user: User = Depends(get_current_user)):
-    return await NewsDAO.get_favourites_for_current_user(current_user)
-
-
-@router.post("/favourites/{news_id}")
-async def add_news_to_favourites(news_id: int, current_user: User = Depends(get_current_user)):
-    return await NewsDAO.add_news_to_favourites(news_id, current_user)
-
-
-@router.delete("/favourites/{news_id}", response_model=dict)
-async def remove_news_from_favourites(news_id: int, current_user: User = Depends(get_current_user)):
-    try:
-        removed_favourite = await NewsDAO().remove_news_from_favourites(news_id, current_user)
-        return removed_favourite
-    except Exception as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.post("/{news_id}/up_vote", status_code=200)

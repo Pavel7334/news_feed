@@ -33,7 +33,7 @@ class BaseDAO:
     @classmethod
     async def find_all(cls, filters: SNewsFilter):
         async with async_session_maker() as session:
-            query = select(cls.model.__table__.columns).offset(filters.page-1).limit(filters.limit)
+            query = select(cls.model.__table__.columns).offset(filters.page - 1).limit(filters.limit)
             query = cls.sorting_query(query, filters)
             result = await session.execute(query)
             cls.count = await cls.get_count(query)
@@ -42,12 +42,9 @@ class BaseDAO:
     @classmethod
     async def create(cls, data):
         async with async_session_maker() as session:
-            # Создаем экземпляр модели, передавая данные
             instance = cls.model(**data)
             session.add(instance)
             await session.commit()
-
-
 
     @classmethod
     async def update(cls, id: int, **data):

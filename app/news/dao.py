@@ -1,6 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import update, select, exists, and_, delete, func, case
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy import update, select, and_, delete, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dao.base import BaseDAO
@@ -118,7 +117,7 @@ class NewsDAO(BaseDAO):
 
             await session.commit()
 
-    # Создаем асинхронный метод класса NewsDAO для получения списка избранных новостей для текущего пользователя
+        # Создаем асинхронный метод класса NewsDAO для получения списка избранных новостей для текущего пользователя
     @classmethod
     async def get_favourites_for_current_user(cls, current_user: User):
         # Используем контекстный менеджер для создания асинхронной сессии с базой данных
